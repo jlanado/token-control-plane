@@ -1,0 +1,312 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Token Control Plane — live demo</title>
+<style>
+  :root{
+    --bg:#0c0e12; --panel:#13161c; --panel2:#171b22; --line:#262c36;
+    --txt:#e7eaef; --muted:#8b929e; --dim:#5b626d;
+    --green:#37d98a; --amber:#f3b24c; --blue:#5aa9ff; --cyan:#34d6d0;
+    --red:#ff6060; --orange:#ff9d4d;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);
+    font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px}
+  .head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  .logo{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--green);
+    border:1px solid var(--green);padding:3px 8px;border-radius:4px}
+  h1{font-size:19px;font-weight:600;margin:0;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:12.5px}
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:16px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .panel h2{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);
+    margin:0 0 12px;font-weight:600}
+  /* toggles */
+  .tog{display:flex;align-items:center;justify-content:space-between;padding:10px 0;
+    border-bottom:1px solid var(--line)}
+  .tog:last-of-type{border-bottom:0}
+  .tog .lab b{display:block;font-size:13.5px}
+  .tog .lab span{font-size:11.5px;color:var(--dim)}
+  .sw{position:relative;width:40px;height:22px;flex:none;cursor:pointer}
+  .sw input{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer;margin:0}
+  .sw .track{position:absolute;inset:0;background:#2a313c;border-radius:11px;transition:.18s}
+  .sw .knob{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;
+    border-radius:50%;transition:.18s}
+  .sw input:checked ~ .track{background:var(--green)}
+  .sw input:checked ~ .knob{transform:translateX(18px)}
+  .btns{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+  button.run{font-family:var(--sans);font-size:13.5px;font-weight:600;color:#0c0e12;
+    background:var(--green);border:0;border-radius:7px;padding:10px 12px;cursor:pointer;
+    transition:.12s;text-align:left}
+  button.run:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+  button.danger{background:var(--orange)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  /* stream */
+  .stream{height:340px;overflow-y:auto;font-family:var(--mono);font-size:12.5px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px}
+  .stream::-webkit-scrollbar{width:8px}.stream::-webkit-scrollbar-thumb{background:#2a313c;border-radius:4px}
+  .row{display:grid;grid-template-columns:26px 92px 1fr 78px 64px;gap:8px;align-items:center;
+    padding:4px 4px;border-radius:4px;animation:in .22s ease}
+  .row + .row{margin-top:1px}
+  @keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .row .n{color:var(--dim)}
+  .row .kind{color:var(--muted)}
+  .badge{font-size:11px;padding:2px 7px;border-radius:4px;display:inline-block;font-weight:600}
+  .b-small{background:rgba(55,217,138,.15);color:var(--green)}
+  .b-mid{background:rgba(243,178,76,.15);color:var(--amber)}
+  .b-frontier{background:rgba(90,169,255,.15);color:var(--blue)}
+  .b-cache{background:rgba(52,214,208,.15);color:var(--cyan)}
+  .b-esc{background:rgba(255,157,77,.18);color:var(--orange)}
+  .b-kill{background:rgba(255,96,96,.18);color:var(--red)}
+  .row .tok{text-align:right;color:var(--muted)}
+  .row .cost{text-align:right;color:var(--txt)}
+  .row.killed{background:rgba(255,96,96,.06)}
+  .empty{color:var(--dim);font-family:var(--mono);font-size:12px;padding:18px;text-align:center}
+  /* metrics */
+  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .metric{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:11px 12px}
+  .metric .k{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim)}
+  .metric .v{font-family:var(--mono);font-size:20px;font-weight:600;margin-top:3px}
+  .metric .d{font-size:11px;color:var(--muted);margin-top:1px}
+  .hero{background:linear-gradient(0deg,var(--panel2),var(--panel2));border:1px solid var(--green);
+    border-radius:10px;padding:16px;margin-top:14px;display:flex;align-items:center;
+    justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .hero .label{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+  .hero .nums{font-family:var(--mono);font-size:15px;color:var(--muted);margin-top:4px}
+  .hero .nums b{color:var(--txt);font-size:26px;font-weight:600}
+  .hero .nums .strike{text-decoration:line-through;color:var(--dim)}
+  .hero .cut{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--green)}
+  .fleet{margin-top:14px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .fleet .frow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .fleet input[type=range]{flex:1;min-width:160px;accent-color:var(--green)}
+  .fleet .annual{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--green)}
+  .note{font-size:11px;color:var(--dim);margin-top:10px;font-family:var(--mono)}
+  .q-bar{height:5px;background:#2a313c;border-radius:3px;overflow:hidden;margin-top:6px}
+  .q-fill{height:100%;background:var(--cyan)}
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <span class="logo">CTRL-PLANE</span>
+    <h1>AI Token Control Plane</h1>
+    <span class="sub">— meter · route · cache · compress · govern · price every LLM call</span>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin:-6px 0 16px;font-family:var(--mono)">
+    A <b style="color:var(--txt)">control plane</b>, not a compressor — compression is one pluggable stage (e.g. Headroom). The moat: routing · governance · outcome pricing.
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: controls -->
+    <div>
+      <div class="panel">
+        <h2>Control plane</h2>
+        <div class="tog">
+          <span class="lab"><b>Router</b><span>cheapest model that passes</span></span>
+          <label class="sw"><input type="checkbox" id="t-router" checked><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="tog">
+          <span class="lab"><b>Semantic cache</b><span>reuse prior answers</span></span>
+          <label class="sw"><input type="checkbox" id="t-cache" checked><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="tog">
+          <span class="lab"><b>Budget governor</b><span>cap + runaway kill switch</span></span>
+          <label class="sw"><input type="checkbox" id="t-gov" checked><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="tog">
+          <span class="lab"><b>Payload compression</b><span>shrink context (Headroom-style)</span></span>
+          <label class="sw"><input type="checkbox" id="t-comp" checked><span class="track"></span><span class="knob"></span></label>
+        </div>
+        <div class="btns">
+          <button class="run" id="run-ticket">▶ &nbsp;Run agent — resolve JIRA-4821</button>
+          <button class="run danger" id="run-loop">⚠ &nbsp;Run buggy agent (retry loop)</button>
+          <button class="run ghost" id="reset">↺ &nbsp;Reset</button>
+        </div>
+        <div class="note">All off = "naive" baseline:<br>frontier-only, no cache, no governor.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: stream + metrics -->
+    <div>
+      <div class="panel">
+        <h2>Request stream <span id="mode-tag" style="color:var(--green)"></span></h2>
+        <div class="stream" id="stream"><div class="empty">Press “Run agent” to watch calls flow through the control plane.</div></div>
+
+        <div class="mgrid">
+          <div class="metric"><div class="k">Tokens</div><div class="v" id="m-tok">—</div><div class="d" id="m-tok-d"></div></div>
+          <div class="metric"><div class="k">Cache hit rate</div><div class="v" id="m-cache">—</div><div class="d">reused calls</div></div>
+          <div class="metric"><div class="k">Routing savings</div><div class="v" id="m-route">—</div><div class="d">vs all-frontier</div></div>
+          <div class="metric"><div class="k">Quality (Q)</div><div class="v" id="m-q">—</div><div class="q-bar"><div class="q-fill" id="m-qbar" style="width:0%"></div></div></div>
+          <div class="metric"><div class="k">Run cost</div><div class="v" id="m-cost">—</div><div class="d" id="m-cost-d"></div></div>
+          <div class="metric"><div class="k">Compression</div><div class="v" id="m-comp">—</div><div class="d">context shrunk</div></div>
+        </div>
+
+        <div class="hero">
+          <div>
+            <div class="label">Cost per resolved ticket</div>
+            <div class="nums"><span class="strike" id="h-naive">—</span> &rarr; <b id="h-cur">—</b></div>
+          </div>
+          <div class="cut" id="h-cut">—</div>
+        </div>
+
+        <div class="fleet">
+          <div class="label" style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)">Fleet projection</div>
+          <div class="frow" style="margin-top:10px">
+            <span style="font-family:var(--mono);font-size:12.5px;color:var(--muted)">Agent runs/day</span>
+            <input type="range" id="fleet-range" min="1000" max="100000" step="1000" value="50000">
+            <span style="font-family:var(--mono);font-size:14px;width:74px;text-align:right" id="fleet-val">50,000</span>
+          </div>
+          <div class="frow" style="margin-top:12px;justify-content:space-between">
+            <span style="color:var(--muted);font-size:12.5px">Estimated annual savings (250 working days)</span>
+            <span class="annual" id="fleet-annual">—</span>
+          </div>
+          <div class="note">Compression is a pluggable stage (e.g. Headroom). The defensible layer is routing · governance · outcome pricing.<br>Prices illustrative: small $0.30 · mid $3.00 · frontier $15.00 per 1M tokens. Same logic as the Python gateway.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TIERS=[{name:'small',price:0.30,cap:0.70},{name:'mid',price:3.00,cap:0.88},{name:'frontier',price:15.00,cap:0.97}];
+const FRONTIER=TIERS[2];
+const SPECS={classify:[0.50,5000],retrieve:[0.55,12000],summarize:[0.60,8000],write_tests:[0.78,20000],review:[0.80,25000],codegen:[0.85,32000]};
+const COMPRESS={classify:[0.55,0.30],retrieve:[0.90,0.85],summarize:[0.70,0.45],write_tests:[0.50,0.50],review:[0.80,0.70],codegen:[0.40,0.45]};
+const compTokens=(kind,tok)=>{const[c,r]=COMPRESS[kind];return Math.round(tok*(1-c*r));};
+const costOf=(tok,t)=>tok/1e6*t.price;
+const route=req=>{for(const t of TIERS){if(t.cap>=req)return t;}return FRONTIER;};
+function runModel(req,t){const m=t.cap-req;if(m>=-0.001)return{q:Math.min(1,0.86+m*0.25),pass:true};const q=Math.max(0.3,t.cap-0.15);return{q,pass:q>=0.8};}
+const tokset=s=>new Set((s.toLowerCase().match(/\w+/g)||[]));
+function jac(a,b){let i=0;for(const x of a)if(b.has(x))i++;const u=a.size+b.size-i;return u?i/u:0;}
+
+const TICKET=[
+ ['classify','Triage ticket JIRA-4821: NPE in PaymentService on null currency'],
+ ['retrieve','Fetch code context for PaymentService.processPayment'],
+ ['retrieve','Fetch code context for PaymentService.processPayment'],
+ ['summarize','Summarize related incidents for PaymentService null currency'],
+ ['codegen','Generate null-check fix for PaymentService.processPayment currency field'],
+ ['retrieve','Fetch code context for PaymentService.processPayment'],
+ ['review','Review proposed fix for side effects in PaymentService'],
+ ['write_tests','Write unit tests for null currency handling in PaymentService'],
+ ['codegen','Generate null-check fix for PaymentService.processPayment currency field'],
+ ['retrieve','Fetch CI config for payments module'],
+ ['summarize','Summarize test results for payments module'],
+ ['review','Review proposed fix for side effects in PaymentService'],
+ ['review','Review PR description for JIRA-4821'],
+ ['classify','Classify PR risk level for JIRA-4821'],
+ ['summarize','Summarize related incidents for PaymentService null currency'],
+ ['codegen','Generate changelog entry for JIRA-4821 fix'],
+];
+const LOOP=TICKET.slice(0,5).concat(Array(6).fill(['codegen','Retry: regenerate fix for PaymentService null currency']));
+
+function execute(steps,{router,cache,gov,comp}){
+  const exact={},entries=[];let hits=0,looks=0;
+  const seen={};let used=0,killed=null;
+  const out=[];
+  for(let i=0;i<steps.length;i++){
+    const [kind,prompt]=steps[i];const [req,tok]=SPECS[kind];
+    const foot=comp?compTokens(kind,tok):tok;
+    if(cache){looks++;const key=kind+'|'+prompt;let hit=null;
+      if(exact[key]!=null)hit=exact[key];
+      else{const ts=tokset(prompt);for(const e of entries){if(e.kind!==kind)continue;if(jac(ts,e.ts)>=0.85){hit=e.v;break;}}}
+      if(hit!=null){hits++;out.push({n:i+1,kind,decision:'cache',tokens:0,raw:0,cost:0,q:hit,cached:true});continue;}
+    }
+    if(gov){const sig=kind+'|'+prompt;seen[sig]=(seen[sig]||0)+1;
+      if(seen[sig]>3){killed='loop detected on '+kind+' (>3× identical)';out.push({n:i+1,kind,decision:'kill',tokens:0,raw:0,cost:0,q:0,killed:true,reason:killed});break;}
+      if(used+foot>800000){killed='per-run token budget exceeded';out.push({n:i+1,kind,decision:'kill',tokens:0,raw:0,cost:0,q:0,killed:true,reason:killed});break;}
+    }
+    let t=router?route(req):FRONTIER;let r=runModel(req,t);let tokens=foot,esc=false;
+    if(router&&!r.pass){const idx=TIERS.indexOf(t);if(idx<2){t=TIERS[idx+1];r=runModel(req,t);tokens+=foot;esc=true;}}
+    if(gov)used+=tokens;
+    if(cache){exact[kind+'|'+prompt]=r.q;entries.push({kind,ts:tokset(prompt),v:r.q});}
+    out.push({n:i+1,kind,decision:t.name,tokens,raw:tok*(esc?2:1),cost:costOf(tokens,t),q:r.q,escalated:esc,compressed:comp});
+  }
+  return {out,hits,looks,killed};
+}
+function summarize(res){
+  const ex=res.out.filter(r=>!r.killed&&r.decision!=='cache');
+  const tokens=ex.reduce((a,r)=>a+r.tokens,0);
+  const raw=ex.reduce((a,r)=>a+(r.raw||r.tokens),0);
+  const cost=ex.reduce((a,r)=>a+r.cost,0);
+  const qs=ex.map(r=>r.q);const Q=qs.length?qs.reduce((a,b)=>a+b,0)/qs.length:0;
+  const fc=ex.reduce((a,r)=>a+costOf(r.tokens,FRONTIER),0);
+  const routeSav=fc?1-cost/fc:0;
+  const hit=res.looks?res.hits/res.looks:0;
+  const compSav=raw?1-tokens/raw:0;
+  return {tokens,raw,compSav,cost,Q,routeSav,hit,cpo:Q?cost/Q:0,killed:res.killed};
+}
+
+const $=id=>document.getElementById(id);
+const fmt=n=>n.toLocaleString('en-US');
+const usd=n=>'$'+n.toFixed(2);
+let lastCur=null,running=false;
+
+function badge(d){const m={small:'b-small',mid:'b-mid',frontier:'b-frontier',cache:'b-cache',kill:'b-kill'};
+  const label=d==='cache'?'CACHE HIT':d==='kill'?'KILLED':d;
+  return `<span class="badge ${m[d]||'b-mid'}">${label}</span>`;}
+
+function paintMetrics(s,naive){
+  $('m-tok').textContent=fmt(s.tokens);
+  $('m-tok-d').textContent='naive '+fmt(naive.tokens);
+  $('m-cache').textContent=Math.round(s.hit*100)+'%';
+  $('m-route').textContent=Math.round(s.routeSav*100)+'%';
+  $('m-q').textContent=s.Q.toFixed(2);
+  $('m-qbar').style.width=Math.round(s.Q*100)+'%';
+  $('m-cost').textContent=usd(s.cost);
+  $('m-cost-d').textContent='naive '+usd(naive.cost);
+  $('m-comp').textContent=Math.round(s.compSav*100)+'%';
+  $('h-naive').textContent=usd(naive.cpo);
+  $('h-cur').textContent=s.killed?'killed':usd(s.cpo);
+  const cut=naive.cpo?Math.round((1-s.cpo/naive.cpo)*100):0;
+  $('h-cut').textContent=(cut>0?'−':'')+Math.abs(cut)+'%';
+  lastCur=s;updateFleet();
+}
+function updateFleet(){
+  if(!lastCur){$('fleet-annual').textContent='—';return;}
+  const naive=execute(TICKET,{router:false,cache:false,gov:false});
+  const nb=summarize(naive);
+  const perRun=Math.max(0,nb.cpo-lastCur.cpo);
+  const runs=+$('fleet-range').value;
+  $('fleet-val').textContent=fmt(runs);
+  $('fleet-annual').textContent=usd(perRun*runs*250).replace('.00','');
+}
+function opts(){return {router:$('t-router').checked,cache:$('t-cache').checked,gov:$('t-gov').checked,comp:$('t-comp').checked};}
+function modeTag(){const o=opts();const on=['router'].filter(k=>o[k]).length;
+  return (o.router||o.cache||o.gov)?'· control plane active':'· naive baseline';}
+
+async function runWorkflow(steps){
+  if(running)return;running=true;
+  document.querySelectorAll('button.run').forEach(b=>b.disabled=true);
+  $('mode-tag').textContent=modeTag();
+  const stream=$('stream');stream.innerHTML='';
+  const res=execute(steps,opts());
+  const naive=summarize(execute(TICKET,{router:false,cache:false,gov:false}));
+  for(const r of res.out){
+    const div=document.createElement('div');
+    div.className='row'+(r.killed?' killed':'');
+    const extra=r.escalated?' <span class="badge b-esc">ESCALATED</span>':'';
+    div.innerHTML=`<span class="n">${r.n}</span><span class="kind">${r.kind}</span>`+
+      `<span>${badge(r.decision)}${extra}${r.killed?' <span style="color:var(--red)">'+r.reason+'</span>':''}</span>`+
+      `<span class="tok">${r.tokens?((r.compressed?'<span style="color:#b3aaff">⊟</span> ':'')+fmt(r.tokens)):'—'}</span>`+
+      `<span class="cost">${r.cost?usd(r.cost):'—'}</span>`;
+    stream.appendChild(div);stream.scrollTop=stream.scrollHeight;
+    await new Promise(r=>setTimeout(r,140));
+  }
+  paintMetrics(summarize(res),naive);
+  running=false;document.querySelectorAll('button.run').forEach(b=>b.disabled=false);
+}
+
+$('run-ticket').onclick=()=>runWorkflow(TICKET);
+$('run-loop').onclick=()=>runWorkflow(LOOP);
+$('reset').onclick=()=>{$('stream').innerHTML='<div class="empty">Press “Run agent” to watch calls flow through the control plane.</div>';
+  ['m-tok','m-cache','m-route','m-q','m-cost','m-comp'].forEach(id=>$(id).textContent='—');
+  $('m-tok-d').textContent='';$('m-cost-d').textContent='';$('m-qbar').style.width='0%';
+  $('h-naive').textContent='—';$('h-cur').textContent='—';$('h-cut').textContent='—';
+  $('mode-tag').textContent='';lastCur=null;$('fleet-annual').textContent='—';};
+['t-router','t-cache','t-gov','t-comp'].forEach(id=>$(id).onchange=()=>{if(lastCur&&!running)runWorkflow(document.querySelector('#stream .killed')?LOOP:TICKET);});
+$('fleet-range').oninput=updateFleet;
+</script>

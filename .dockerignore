@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.git/
+.gitignore
+*.md
+control_plane_demo.html
+.DS_Store
+Thumbs.db
