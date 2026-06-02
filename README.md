@@ -1,40 +1,112 @@
 # AI Token Control Plane
 
-Make every LLM call in the firm **metered, routed, cached, compressed, governed, and priced by outcome** —
-so AI scales without the cost scaling with it.
+## Governance, Optimization, and FinOps for Agentic AI
 
-**This is a control plane, not a compressor.** Payload compression (e.g. [Headroom](https://github.com/chopratejas/headroom))
-is *one pluggable stage*. The defensible layer — the part a vendor or OSS tool doesn't give you — is model
-**routing**, budget **governance**, and **outcome pricing** tuned on your own telemetry.
+Enterprise reference architecture for governing, optimizing, and measuring AI consumption across copilots, coding agents, RAG pipelines, AI workflows, and enterprise applications.
 
-> One gateway sits in front of every model call. That single chokepoint is what lets you
-> *see* token spend, *cut* it (route to the cheapest model that still passes, reuse prior
-> answers, compress the payload), *cap* it (kill runaway agents), and *price* it against business outcomes.
+Make every LLM call in the firm **metered, routed, cached, compressed, governed, and priced by outcome** so AI adoption scales without costs scaling with it.
 
-Pipeline: `governor → cache → router → compress → model → quality gate → meter/price`
+---
 
-## What's here
+## Executive Summary
 
-| File | What it is | Use it for |
-|---|---|---|
-| `control_plane_demo.html` | Self-contained visual simulator (vanilla JS, no deps) | **The stage demo.** Double-click to open in any browser. Runs offline. |
-| `control_plane.py` | Core logic: router, semantic cache, budget governor, quality gate, metrics (stdlib only) | The "real engineering" proof |
-| `gateway.py` | FastAPI OpenAI-compatible proxy + `/metrics` (sim mode by default) | Show it's production-shaped |
-| `demo.py` | CLI: naive vs control-plane, plus the runaway kill-switch scenario | `python3 demo.py` or `.venv/bin/python demo.py` |
+As AI adoption accelerates across the enterprise, token consumption becomes the new compute cost.
 
-## Run the visual demo (no install)
+Organizations are rapidly deploying coding assistants, agentic workflows, retrieval-augmented generation (RAG), copilots, and AI-powered applications. While these capabilities drive productivity, they also introduce a new challenge: uncontrolled token consumption, inconsistent governance, and rapidly increasing AI operating costs.
 
-Open `control_plane_demo.html` in a browser. Toggle Router / Cache / Governor, press
-**Run agent**, watch calls flow through. Press **Run buggy agent** to see the kill switch fire.
-Drag the fleet slider to project annual savings at JPM scale. All off = naive baseline.
+The **AI Token Control Plane** introduces a centralized governance and optimization layer in front of every AI interaction.
 
-## Run the Python demo (no install)
+Similar to how Cloud FinOps transformed cloud spending through visibility, governance, and accountability, the AI Token Control Plane provides a framework for managing AI consumption at enterprise scale.
+
+> Enable AI adoption at scale while maintaining governance, controlling costs, reducing waste, and preserving output quality.
+
+---
+
+## Business Outcomes
+
+* Reduce AI operating costs through intelligent routing and caching
+* Establish governance, budgeting, and policy enforcement for AI usage
+* Prevent runaway agentic workflows and uncontrolled spend
+* Enable chargeback/showback across teams and business units
+* Maintain output quality while optimizing token consumption
+* Create a foundation for enterprise AI FinOps
+
+---
+
+## Why This Matters
+
+Without a control plane, enterprises face:
+
+* Unbounded token growth
+* Excessive use of frontier models
+* Duplicate AI requests across teams
+* Limited cost attribution
+* Minimal governance controls
+* Runaway agentic workflows
+* Growing AI spend disconnected from business value
+
+The AI Token Control Plane addresses these challenges through a layered architecture that combines governance, optimization, observability, and FinOps into a single enterprise platform.
+
+---
+
+## What Makes This Different
+
+This is a **control plane, not a compressor.**
+
+Payload compression (e.g. Headroom) is one pluggable optimization stage.
+
+The defensible layer, and ultimately the enterprise moat, is:
+
+* Intelligent model routing
+* Budget governance
+* Policy enforcement
+* Semantic caching
+* Quality assurance
+* Outcome-based pricing
+* Telemetry-driven optimization
+
+These capabilities become more valuable as AI adoption grows.
+
+> One gateway sits in front of every model call. That single control point lets you see token spend, optimize it, govern it, cap runaway usage, and continuously improve efficiency through enterprise telemetry.
+
+Pipeline:
+
+`governor → cache → router → compress → model → quality gate → meter/price`
+
+---
+
+## What's Here
+
+| File                      | What it is                                                                               | Use it for                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `control_plane_demo.html` | Self-contained visual simulator (vanilla JS, no deps)                                    | **The stage demo.** Double-click to open in any browser. Runs offline. |
+| `control_plane.py`        | Core logic: router, semantic cache, budget governor, quality gate, metrics (stdlib only) | The engineering proof of concept                                       |
+| `gateway.py`              | FastAPI OpenAI-compatible proxy + `/metrics` (sim mode by default)                       | Demonstrates production-ready integration patterns                     |
+| `demo.py`                 | CLI: naive vs control-plane, plus runaway kill-switch scenario                           | `python3 demo.py` or `.venv/bin/python demo.py`                        |
+
+---
+
+## Run the Visual Demo (No Install)
+
+Open `control_plane_demo.html` in a browser.
+
+Toggle Router / Cache / Governor and press **Run Agent** to watch requests flow through the control plane.
+
+Press **Run Buggy Agent** to see governance controls terminate runaway behavior.
+
+Use the fleet slider to project annual savings at enterprise scale.
+
+All controls disabled represents the naive baseline.
+
+---
+
+## Run the Python Demo
 
 ```bash
 python3 demo.py
 ```
 
-If you prefer a local virtualenv, or your machine has `python3` but not `python`:
+If you prefer a local virtualenv:
 
 ```bash
 python3 -m venv .venv
@@ -42,70 +114,166 @@ source .venv/bin/activate
 python demo.py
 ```
 
-## Run the gateway (optional)
+---
+
+## Run the Gateway (Optional)
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+
 python -m pip install -r requirements.txt
+
 uvicorn gateway:app --reload
-curl -s localhost:8000/v1/chat/completions -H 'content-type: application/json' \
+
+curl -s localhost:8000/v1/chat/completions \
+  -H 'content-type: application/json' \
   -d '{"task":"codegen","agent_run_id":"run-1","prompt":"fix null currency NPE"}'
+
 curl -s localhost:8000/metrics
 ```
+
+---
 
 ## Run with Docker
 
 ```bash
 docker compose up --build
-#   gateway API -> http://localhost:8000   (/metrics, /v1/chat/completions)
-#   visual demo -> http://localhost:8080
 ```
 
-State is in-memory today. To match the reference architecture, uncomment the `redis` +
-`postgres` services in `docker-compose.yml` and point the cache/governor/telemetry at them.
+Services:
 
-## Verified demo numbers (one agent resolving one ticket)
+* Gateway API → http://localhost:8000
+* Visual Demo → http://localhost:8080
 
-| | Naive (frontier-only) | Control plane | Δ |
-|---|---|---|---|
-| Tokens | 273,000 | 114,430 | −58% |
-| Cost | $4.09 | $0.28 | −93% |
-| Quality (Q) | 0.93 | 0.89 | held above bar |
-| **Cost / resolved ticket** | **$4.38** | **$0.31** | **−93%** |
+State is in-memory today.
 
-Each lever compounds (governor is a *safety* lever — it caps blast radius, shown separately):
+To match the reference architecture, uncomment the `redis` and `postgres` services in `docker-compose.yml` and point the cache, governor, and telemetry services at them.
 
-| Stage | Cost | Cumulative cut |
-|---|---|---|
-| naive (frontier) | $4.09 | — |
-| + semantic cache | $2.76 | −33% |
-| + model routing | $0.42 | −90% |
-| + payload compression | $0.28 | −93% |
+---
 
-Runaway scenario: a buggy agent looping on the same call is **killed after 3 retries** instead
-of burning the full budget — that's the governor, the one lever that caps risk rather than cost.
+## Verified Demo Numbers (One Agent Resolving One Ticket)
 
-## The pitch in one line
+| Metric                   | Naive (Frontier Only) | Control Plane | Improvement |
+| ------------------------ | --------------------: | ------------: | ----------: |
+| Tokens                   |               273,000 |       114,430 |        -58% |
+| Cost                     |                 $4.09 |         $0.28 |        -93% |
+| Quality (Q)              |                  0.93 |          0.89 |  Maintained |
+| Cost per Resolved Ticket |                 $4.38 |         $0.31 |        -93% |
 
-> Competitors can copy the AI. They can't copy a router tuned on our own engineering telemetry,
-> or a governance layer that lets us deploy AI where they can't afford to.
+---
 
-## Going to production
+## Optimization Levers
 
-- Swap simulated `run_model` / `call_backend` for real provider calls (LiteLLM, Bedrock, internal LLM Suite).
-- Swap the Jaccard cache for real embeddings + ANN (pgvector / FAISS), cosine ≥ 0.95.
-- Swap the modeled `compress_tokens` for a real compression adapter — **Headroom** is the reference fit
-  (content-aware, local-first, reversible). The control plane owns routing/governance/pricing; the
-  compressor is a transform it calls.
-- Move cache/governor/telemetry state to Redis + Postgres.
-- Replace the cold-start router rules with a learned policy updated by quality-gate outcomes — **this is the proprietary moat.**
+| Stage                 |  Cost | Cumulative Reduction |
+| --------------------- | ----: | -------------------: |
+| Frontier Model Only   | $4.09 |                    — |
+| + Semantic Cache      | $2.76 |                 -33% |
+| + Model Routing       | $0.42 |                 -90% |
+| + Payload Compression | $0.28 |                 -93% |
 
-## Why not just use a compression OSS tool?
+Each optimization layer compounds on the previous one.
 
-Compression shrinks each payload. It does **not** pick the model, cap a runaway agent, or price by
-outcome. Tools like Headroom are excellent on the compression axis and we plug them in — but routing,
-governance, and outcome economics tuned on JPM's own SDLC telemetry are the parts no OSS tool ships,
-and the parts that fit a centrally-governed, audited, sandboxed bank runtime.
+---
 
-*Prices illustrative: small $0.30 · mid $3.00 · frontier $15.00 per 1M tokens.*
+## Governance Example
+
+A buggy agent repeatedly invoking the same request is automatically terminated after three retries.
+
+This demonstrates the **Budget Governor**:
+
+* Limits blast radius
+* Prevents runaway costs
+* Protects shared AI infrastructure
+* Enforces policy automatically
+
+Governance is as important as optimization.
+
+---
+
+## The Pitch in One Line
+
+> Cloud adoption created Cloud FinOps. Agentic AI will require AI FinOps. The AI Token Control Plane is the governance, optimization, and economics layer that makes enterprise-scale AI sustainable.
+
+---
+
+## Strategic Benefits
+
+### Governance
+
+* Budget controls
+* Policy enforcement
+* Quotas
+* Kill switches
+* Auditability
+
+### Optimization
+
+* Semantic caching
+* Intelligent model routing
+* Context reduction
+* Compression adapters
+* Duplicate request elimination
+
+### FinOps
+
+* Token metering
+* Cost attribution
+* Chargeback / showback
+* Budget reporting
+* Executive dashboards
+
+### Quality
+
+* Response validation
+* Quality gates
+* Escalation to stronger models
+* Continuous learning
+
+---
+
+## Going to Production
+
+* Swap simulated `run_model` / `call_backend` for real provider calls (LiteLLM, Bedrock, OpenAI, Anthropic, internal LLM Suite).
+* Swap the Jaccard cache for real embeddings + ANN (pgvector, FAISS, Milvus), cosine ≥ 0.95.
+* Swap the modeled `compress_tokens` for a real compression adapter such as Headroom.
+* Move cache, governor, and telemetry state to Redis and PostgreSQL.
+* Replace the cold-start router rules with a learned policy updated by quality-gate outcomes.
+* Build executive dashboards for governance and FinOps reporting.
+
+---
+
+## Why Not Just Use a Compression OSS Tool?
+
+Compression shrinks payloads.
+
+It does **not**:
+
+* Select the optimal model
+* Govern budgets
+* Enforce policy
+* Stop runaway agents
+* Attribute costs
+* Measure business outcomes
+
+Tools like Headroom are excellent on the compression axis and plug naturally into this architecture.
+
+The control plane owns routing, governance, quality assurance, and AI economics.
+
+Those are the capabilities that enable enterprise-scale AI adoption.
+
+---
+
+## Long-Term Vision
+
+API gateways became standard for governing services.
+
+Cloud FinOps became standard for governing cloud consumption.
+
+As AI adoption scales, enterprises will require a similar layer for governing AI consumption.
+
+The AI Token Control Plane is a reference architecture for that future.
+
+---
+
+*Illustrative pricing assumptions: Small Model $0.30, Mid-Tier Model $3.00, Frontier Model $15.00 per 1M tokens.*
