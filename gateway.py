@@ -65,8 +65,14 @@ def chat(req: ChatRequest):
     if req.task not in TASK_SPECS:
         raise HTTPException(status_code=422, detail=f"unknown task '{req.task}'; valid: {list(TASK_SPECS)}")
     task = make_task(req.task)
+    gov = GOVERNORS.setdefault(req.agent_run_id, BudgetGovernor())
 
-    # 1) cache
+    # 1) loop detection — runs before cache so repeat calls are counted even when cached
+    if not gov.check_loop(req.task, req.prompt):
+        return {"served_from": "killed", "reason": gov.kill_reason,
+                "task": req.task, "run": req.agent_run_id}
+
+    # 2) cache — after loop check, before budget (cache hits are free)
     hit = CACHE.get(req.task, req.prompt)
     if hit is not None:
         rec = {"task": req.task, "team": req.team, "run": req.agent_run_id,
@@ -74,14 +80,13 @@ def chat(req: ChatRequest):
         TELEMETRY.append(rec)
         return {"served_from": "cache", **rec}
 
-    # 2) governor
-    gov = GOVERNORS.setdefault(req.agent_run_id, BudgetGovernor())
+    # 3) token budget — only for cache misses (model calls consume budget)
     footprint = compress_tokens(task) if COMPRESSION_ON else task.tokens
-    if not gov.allow(req.task, req.prompt, footprint):
+    if not gov.check_budget(footprint):
         return {"served_from": "killed", "reason": gov.kill_reason,
                 "task": req.task, "run": req.agent_run_id}
 
-    # 3) route + 4) quality gate w/ escalation  (5) compression applied to footprint)
+    # 4) route + 5) quality gate w/ escalation  (compression applied to footprint)
     tier = route(task)
     q, passed, _ = call_backend(task, tier)
     tokens = footprint

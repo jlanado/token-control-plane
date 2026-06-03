@@ -161,18 +161,27 @@ class BudgetGovernor:
         self.killed = False
         self.kill_reason: str | None = None
 
-    def allow(self, kind: str, prompt: str, next_tokens: int) -> bool:
+    def check_loop(self, kind: str, prompt: str) -> bool:
+        """Increment seen counter; return False if loop limit exceeded."""
         sig = (kind, prompt)
         self.seen[sig] = self.seen.get(sig, 0) + 1
         if self.seen[sig] > self.loop_limit:
             self.killed = True
             self.kill_reason = f"loop detected on '{kind}' (>{self.loop_limit}x identical calls)"
             return False
+        return True
+
+    def check_budget(self, next_tokens: int) -> bool:
+        """Return False if adding next_tokens would exceed the token budget."""
         if self.tokens_used + next_tokens > self.token_budget:
             self.killed = True
             self.kill_reason = "per-run token budget exceeded"
             return False
         return True
+
+    def allow(self, kind: str, prompt: str, next_tokens: int) -> bool:
+        """Combined check used by the simulation loop in execute()."""
+        return self.check_loop(kind, prompt) and self.check_budget(next_tokens)
 
     def add(self, tokens: int):
         self.tokens_used += tokens
