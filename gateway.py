@@ -15,16 +15,17 @@ Endpoints:
     POST /reset                - clear telemetry + per-run governor state
 
 Going live: replace `call_backend()` with a real provider call (LiteLLM, Bedrock,
-internal LLM Suite). Everything else - routing, cache, governor, telemetry - is unchanged.
+internal LLM provider). Everything else - routing, cache, governor, telemetry - is unchanged.
 The gateway is the only place that touches a model, so it is the only place to govern.
 """
 from __future__ import annotations
 import random
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from control_plane import (
-    TIERS, FRONTIER, make_task, route, run_model, cost,
+    TIERS, FRONTIER, TASK_SPECS, make_task, route, run_model, cost,
     SemanticCache, BudgetGovernor, compress_tokens,
 )
 
@@ -45,7 +46,7 @@ class ChatRequest(BaseModel):
     task: str                       # classify | retrieve | summarize | write_tests | review | codegen
     prompt: str
     agent_run_id: str = "default"
-    team: str = "platform-eng"
+    team: str = "platform"
 
 
 def call_backend(task, tier):
@@ -54,8 +55,15 @@ def call_backend(task, tier):
     return q, passed, task.tokens
 
 
+@app.get("/")
+def root():
+    return RedirectResponse(url="/docs")
+
+
 @app.post("/v1/chat/completions")
 def chat(req: ChatRequest):
+    if req.task not in TASK_SPECS:
+        raise HTTPException(status_code=422, detail=f"unknown task '{req.task}'; valid: {list(TASK_SPECS)}")
     task = make_task(req.task)
 
     # 1) cache
@@ -90,8 +98,9 @@ def chat(req: ChatRequest):
     gov.add(tokens)
     CACHE.put(req.task, req.prompt, q)
 
+    raw_tokens = task.tokens * (2 if escalated else 1)
     rec = {"task": req.task, "team": req.team, "run": req.agent_run_id,
-           "tier": tier.name, "tokens": tokens, "raw_tokens": task.tokens,
+           "tier": tier.name, "tokens": tokens, "raw_tokens": raw_tokens,
            "cost": round(c, 5), "quality": q, "escalated": escalated, "cached": False}
     TELEMETRY.append(rec)
     return {"served_from": "model", **rec}

@@ -1,7 +1,7 @@
 # Reference architecture — AI Token Control Plane
 
 A single governed gateway sits in front of every LLM call. It is the one place that can
-**see, cut, cap, and price** token spend across the firm's agents and engineers.
+**see, cut, cap, and price** token spend across your organization's agents and engineers.
 
 > **Control plane, not compressor.** Compression is one pluggable stage. The defensible
 > layer is routing + governance + outcome pricing tuned on proprietary telemetry.
@@ -34,7 +34,7 @@ graph TD
     P1[small]
     P2[mid]
     P3[frontier]
-    P4[internal LLM Suite / Bedrock]
+    P4[internal LLM provider / Bedrock]
   end
 
   subgraph DATA[Data & state]
@@ -131,8 +131,8 @@ sequenceDiagram
 ## 5. Deployment topology (enterprise fit)
 
 - **Centrally operated, not per-developer.** The gateway runs as a governed service; agents
-  point their OpenAI-compatible base URL at it. This fits a regulated, audited, sandboxed bank
-  runtime better than a local per-developer process.
+  point their OpenAI-compatible base URL at it. This fits a regulated, audited, sandboxed
+  enterprise runtime better than a local per-developer process.
 - **Sidecar option** for latency-sensitive teams: cache + governor as a local sidecar, telemetry
   shipped centrally.
 - **Stateless gateway, externalized state** (Redis + Postgres) so it scales horizontally behind a load balancer.

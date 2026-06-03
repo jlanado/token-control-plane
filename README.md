@@ -4,7 +4,7 @@
 
 Enterprise reference architecture for governing, optimizing, and measuring AI consumption across copilots, coding agents, RAG pipelines, AI workflows, and enterprise applications.
 
-Make every LLM call in the firm **metered, routed, cached, compressed, governed, and priced by outcome** so AI adoption scales without costs scaling with it.
+Make every LLM call in your organization **metered, routed, cached, compressed, governed, and priced by outcome** so AI adoption scales without costs scaling with it.
 
 ---
 
@@ -255,7 +255,7 @@ Governance is as important as optimization.
 
 ## Going to Production
 
-* Swap simulated `run_model` / `call_backend` for real provider calls (LiteLLM, Bedrock, OpenAI, Anthropic, internal LLM Suite).
+* Swap simulated `run_model` / `call_backend` for real provider calls (LiteLLM, Bedrock, OpenAI, Anthropic, internal LLM provider).
 * Swap the Jaccard cache for real embeddings + ANN (pgvector, FAISS, Milvus), cosine ≥ 0.95.
 * Swap the modeled `compress_tokens` for a real compression adapter such as <a href="https://github.com/chopratejas/headroom" target="_blank">Headroom</a>.
 * Move cache, governor, and telemetry state to Redis and PostgreSQL.
