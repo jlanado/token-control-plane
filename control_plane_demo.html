@@ -242,7 +242,7 @@ function summarize(res){
 
 const $=id=>document.getElementById(id);
 const fmt=n=>n.toLocaleString('en-US');
-const usd=n=>'$'+n.toFixed(2);
+const usd=n=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 let lastCur=null,running=false;
 
 function badge(d){const m={small:'b-small',mid:'b-mid',frontier:'b-frontier',cache:'b-cache',kill:'b-kill'};
