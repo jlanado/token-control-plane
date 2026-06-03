@@ -105,6 +105,10 @@
     <div>
       <div class="panel">
         <h2>Control plane</h2>
+        <div class="tog" style="padding-bottom:12px;margin-bottom:2px;border-bottom:1px solid var(--line)">
+          <span class="lab"><b id="master-label" style="font-size:14px;color:var(--green)">Control plane active</b><span>enable / disable all features</span></span>
+          <label class="sw"><input type="checkbox" id="t-master" checked><span class="track"></span><span class="knob"></span></label>
+        </div>
         <div class="tog">
           <span class="lab"><b>Router</b><span>cheapest model that passes</span></span>
           <label class="sw"><input type="checkbox" id="t-router" checked><span class="track"></span><span class="knob"></span></label>
@@ -314,7 +318,21 @@ $('reset').onclick=()=>{$('stream').innerHTML='<div class="empty">Press “Run a
   $('m-tok-d').textContent='';$('m-cost-d').textContent='';$('m-qbar').style.width='0%';
   $('h-naive').textContent='—';$('h-cur').textContent='—';$('h-cut').textContent='—';
   $('mode-tag').textContent='';lastCur=null;$('fleet-annual').textContent='—';updateFleet();};
-['t-router','t-cache','t-gov','t-comp'].forEach(id=>$(id).onchange=()=>{if(lastCur&&!running)runWorkflow(document.querySelector('#stream .killed')?LOOP:TICKET);});
+const TOGGLES=['t-router','t-cache','t-gov','t-comp'];
+function syncMaster(){
+  const on=TOGGLES.map(id=>$(id).checked);
+  const m=$('t-master'),lbl=$('master-label');
+  if(on.every(Boolean)){m.checked=true;m.indeterminate=false;lbl.textContent='Control plane active';lbl.style.color='var(--green)';}
+  else if(on.every(v=>!v)){m.checked=false;m.indeterminate=false;lbl.textContent='Naive baseline';lbl.style.color='var(--muted)';}
+  else{m.indeterminate=true;lbl.textContent='Partial features';lbl.style.color='var(--amber)';}
+}
+$('t-master').onchange=()=>{
+  const on=$('t-master').checked;
+  TOGGLES.forEach(id=>{$(id).checked=on;});
+  syncMaster();
+  if(lastCur&&!running)runWorkflow(document.querySelector('#stream .killed')?LOOP:TICKET);
+};
+TOGGLES.forEach(id=>$(id).onchange=()=>{syncMaster();if(lastCur&&!running)runWorkflow(document.querySelector('#stream .killed')?LOOP:TICKET);});
 $('fleet-range').oninput=updateFleet;
 updateFleet();
 </script>
