@@ -272,10 +272,10 @@ function paintMetrics(s,naive){
   lastCur=s;updateFleet();
 }
 function updateFleet(){
-  if(!lastCur){$('fleet-gross').textContent='—';$('fleet-annual').textContent='—';return;}
+  const cur=lastCur||summarize(execute(TICKET,opts()));
   const naive=execute(TICKET,{router:false,cache:false,gov:false});
   const nb=summarize(naive);
-  const perRun=Math.max(0,nb.cpo-lastCur.cpo);
+  const perRun=Math.max(0,nb.cpo-cur.cpo);
   const runs=+$('fleet-range').value;
   $('fleet-val').textContent=fmt(runs);
   $('fleet-gross').textContent=usd(nb.cpo*runs*250).replace('.00','');
@@ -313,7 +313,8 @@ $('reset').onclick=()=>{$('stream').innerHTML='<div class="empty">Press “Run a
   ['m-tok','m-cache','m-route','m-q','m-cost','m-comp'].forEach(id=>$(id).textContent='—');
   $('m-tok-d').textContent='';$('m-cost-d').textContent='';$('m-qbar').style.width='0%';
   $('h-naive').textContent='—';$('h-cur').textContent='—';$('h-cut').textContent='—';
-  $('mode-tag').textContent='';lastCur=null;$('fleet-gross').textContent='—';$('fleet-annual').textContent='—';};
+  $('mode-tag').textContent='';lastCur=null;updateFleet();};
 ['t-router','t-cache','t-gov','t-comp'].forEach(id=>$(id).onchange=()=>{if(lastCur&&!running)runWorkflow(document.querySelector('#stream .killed')?LOOP:TICKET);});
 $('fleet-range').oninput=updateFleet;
+updateFleet();
 </script>
