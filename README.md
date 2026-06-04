@@ -94,13 +94,15 @@ Pipeline:
 
 Open `control_plane_demo.html` in a browser.
 
-Toggle Router / Cache / Governor and press **Run Agent** to watch requests flow through the control plane.
+Use the **master toggle** to enable or disable all features at once, or tune individual controls (Router / Semantic Cache / Budget Governor / Payload Compression).
 
-Press **Run Buggy Agent** to see governance controls terminate runaway behavior.
+Press **Run Agent** to watch requests flow through the control plane.
 
-Use the fleet slider to project annual savings at enterprise scale.
+Press **Run Buggy Agent** to see the governor kill switch terminate runaway behavior mid-stream.
 
-All controls disabled represents the naive baseline.
+Use the **fleet slider** to project gross annual cost and estimated savings at enterprise scale.
+
+All features off = naive baseline: frontier-only, no cache, no governor.
 
 ---
 
